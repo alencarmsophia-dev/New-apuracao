@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0b0d11" id="meta-theme-color">
+  <meta name="description" content="Acompanhamento em tempo real da apuração do segundo turno da eleição de 2026 com dados oficiais do TSE.">
+  <title>Apuração do 2º Turno 2026 — Resultado Oficial TSE</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a href="#placar-nacional" class="skip-link">Pular para o resultado</a>
+
+  <!-- Região aria-live="polite" com limitação de frequência (Seção 7) -->
+  <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <div class="brand-group">
+        <div class="title-block">
+          <p id="election-subtitle">Segundo turno • 25 de outubro de 2026 • Resultado oficial: TSE</p>
+          <h1>
+            <span id="role-heading">Presidente da República</span>
+            <span class="badge" id="simtag" hidden>Simulado TSE</span>
+            <span class="badge" id="demotag" hidden>Demo PT/PL</span>
+            <span class="badge final-badge" id="finaltag" hidden>Totalização final do TSE</span>
+          </h1>
+        </div>
+
+        <!-- Aba Presidente / Governador (Fase 2A opcional) -->
+        <div class="seg-group hide-on-tv" role="tablist" aria-label="Cargo em disputa">
+          <button type="button" class="seg-btn" id="tab-pres" role="tab" aria-selected="true">Presidente</button>
+          <button type="button" class="seg-btn" id="tab-gov" role="tab" aria-selected="false">Governadores</button>
+        </div>
+      </div>
+
+      <!-- Barra de status sempre visível (R4, R5, R29) -->
+      <div class="status-bar">
+        <div class="status-pill" id="statusbox" role="status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Conectando ao TSE…</span>
+          <span class="countdown-ring-wrap" id="countdown-wrap" title="Próxima atualização automática">
+            <svg class="countdown-ring" viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="ring-bg" cx="12" cy="12" r="9"></circle>
+              <circle class="ring-fg" id="ring-fg" cx="12" cy="12" r="9" stroke-dasharray="56.55" stroke-dashoffset="0"></circle>
+            </svg>
+            <span id="countdown-sec">30s</span>
+          </span>
+        </div>
+
+        <button type="button" class="btn hide-on-tv" id="btn-refresh" aria-label="Atualizar dados agora">
+          Atualizar agora
+        </button>
+
+        <button type="button" class="btn btn-icon hide-on-tv" id="btn-theme" aria-label="Alternar tema (automático, claro, escuro)" title="Tema: automático">
+          <span id="theme-label">Auto</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="main-content">
+    <!-- Banner de estado: Antes das 17h, Erro de rede ou Cache inicial (4.5) -->
+    <section class="notice-banner" id="notice-banner" hidden aria-live="polite">
+      <div class="notice-text">
+        <strong id="notice-title">A divulgação do TSE começa às 17h</strong>
+        <span id="notice-desc">Horário oficial de Brasília (UTC−3). O painel buscará os dados automaticamente.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div class="pre17-countdown" id="pre17-timer" hidden>00:00:00</div>
+        <button type="button" class="btn" id="btn-retry-banner" hidden>Tentar de novo</button>
+      </div>
+    </section>
+
+    <!-- Barra seletora de UF quando na aba Governadores (Fase 2A) -->
+    <section class="gov-selector-bar" id="gov-bar" hidden aria-label="Estados com 2º turno para Governador">
+      <span style="font-size:13px;color:var(--muted);font-weight:500">UF em disputa (2º turno):</span>
+      <div class="gov-uf-chips" id="gov-uf-chips"></div>
+    </section>
+
+    <div class="bento-grid">
+      <!-- Coluna Esquerda: Mapa / Cartograma e Evolução da Sessão -->
+      <div class="bento-col">
+        <section class="card card-lg" aria-labelledby="map-section-title">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="map-section-title">Apuração por estado</h2>
+              <span class="card-sub" id="map-section-sub">Toque ou clique em uma UF para abrir o detalhe</span>
+            </div>
+            <div class="seg-group hide-on-tv" role="group" aria-label="Modo de exibição do mapa">
+              <button type="button" class="seg-btn" id="mode-map-btn" aria-pressed="true">Mapa</button>
+              <button type="button" class="seg-btn" id="mode-grid-btn" aria-pressed="false">Quadrados</button>
+            </div>
+          </div>
+
+          <div class="map-viewport mode-map" id="map-viewport">
+            <!-- Modo 1: Mapa Geográfico SVG embutido (R15, R17) -->
+            <div id="geo-view">
+              <svg id="map" viewBox="0 0 640 640" role="group" aria-label="Mapa do Brasil por estado. Use Tab ou setas para navegar e Enter para selecionar.">
+                <defs id="map-defs">
+                  <pattern id="tie-pattern" width="10" height="10" patternTransform="rotate(-45 0 0)" patternUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="5" height="10" id="tie-rect-a" fill="#d91b2b"></rect>
+                    <rect x="5" y="0" width="5" height="10" id="tie-rect-b" fill="#1a4fd1"></rect>
+                  </pattern>
+                </defs>
+                <g id="map-pan-group">
+                  <g id="map-paths"></g>
+                  <g id="map-labels"></g>
+                </g>
+              </svg>
+
+              <div class="map-ext-btn-wrap">
+                <button type="button" class="btn" id="ext-btn" aria-label="Votos no Exterior (ZZ)">
+                  <span class="ext-pill-dot" id="ext-dot"></span>
+                  <span>Exterior (ZZ)</span>
+                </button>
+              </div>
+
+              <div class="map-zoom-controls hide-on-tv" aria-label="Controles de zoom do mapa">
+                <button type="button" class="btn" id="zoom-in" aria-label="Aproximar mapa" title="Aproximar">+</button>
+                <button type="button" class="btn" id="zoom-out" aria-label="Afastar mapa" title="Afastar">−</button>
+                <button type="button" class="btn" id="zoom-reset" aria-label="Recentralizar mapa" title="Recentralizar">⟲</button>
+              </div>
+            </div>
+
+            <!-- Modo 2: Cartograma de Quadrados (Tile Grid Map, R15) -->
+            <div id="grid-view" hidden>
+              <div class="tile-grid" id="tile-grid" role="group" aria-label="Cartograma de quadrados por estado. Use as setas ou Tab para navegar."></div>
+            </div>
+          </div>
+
+          <!-- Legenda discreta em 5 faixas por partido + empate técnico + sem votos (R12, R13, R14) -->
+          <div class="map-legend" id="map-legend" aria-label="Legenda de vantagem em pontos percentuais"></div>
+        </section>
+
+        <!-- Gráficos SVG da sessão (R9, R22) -->
+        <section class="card" aria-labelledby="charts-title">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="charts-title">Histórico desta sessão</h2>
+              <span class="card-sub">Evolução registrada desde que você abriu o painel</span>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-box">
+              <h3>Diferença atual (p.p.)</h3>
+              <p id="chart-diff-caption">Margem em pontos percentuais por % apurado</p>
+              <svg class="chart-svg" id="svg-chart-diff" viewBox="0 0 320 110" role="img" aria-labelledby="diff-svg-title diff-svg-desc">
+                <title id="diff-svg-title">Gráfico da diferença em pontos percentuais</title>
+                <desc id="diff-svg-desc">Mostra a evolução da diferença percentual entre os dois primeiros colocados desde a abertura do painel.</desc>
+                <g id="diff-chart-body"></g>
+              </svg>
+              <table class="sr-only" id="table-chart-diff">
+                <caption>Dados da diferença em pontos percentuais ao longo da sessão</caption>
+                <thead><tr><th>Horário TSE</th><th>% Apurado</th><th>Diferença (p.p.)</th></tr></thead>
+                <tbody id="tbody-chart-diff"></tbody>
+              </table>
+            </div>
+
+            <div class="chart-box">
+              <h3>Ritmo da apuração (% seções)</h3>
+              <p id="chart-prog-caption">Seções totalizadas por horário do TSE</p>
+              <svg class="chart-svg" id="svg-chart-prog" viewBox="0 0 320 110" role="img" aria-labelledby="prog-svg-title prog-svg-desc">
+                <title id="prog-svg-title">Gráfico do percentual de seções apuradas ao longo do tempo</title>
+                <desc id="prog-svg-desc">Mostra a evolução do percentual de seções totalizadas pelo TSE desde a abertura do painel.</desc>
+                <g id="prog-chart-body"></g>
+              </svg>
+              <table class="sr-only" id="table-chart-prog">
+                <caption>Dados do percentual de seções apuradas ao longo da sessão</caption>
+                <thead><tr><th>Horário TSE</th><th>Seções Apuradas (%)</th></tr></thead>
+                <tbody id="tbody-chart-prog"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Coluna Direita: Placar Nacional, Detalhe da UF, Andamento e Ranking -->
+      <div class="bento-col">
+        <!-- Placar Nacional (R19, R20) -->
+        <section class="card card-lg" id="placar-nacional" aria-labelledby="score-title">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="score-title">Placar nacional</h2>
+              <span class="card-sub" id="score-subtitle">Ordem fixa oficial do TSE • Resultado oficial: TSE</span>
+            </div>
+          </div>
+
+          <div class="split-wrap" aria-hidden="true">
+            <span class="split-midlabel">50%</span>
+            <div class="split-bar" id="split-bar"></div>
+            <div class="split-midline"></div>
+          </div>
+
+          <!-- Cartões simétricos dos candidatos (R19) -->
+          <div class="cands-grid" id="cands-grid">
+            <div class="cand-card">
+              <div class="skeleton" style="height:22px;width:65%"></div>
+              <div class="skeleton" style="height:42px;width:50%"></div>
+              <div class="skeleton" style="height:6px;width:100%"></div>
+            </div>
+            <div class="cand-card">
+              <div class="skeleton" style="height:22px;width:65%"></div>
+              <div class="skeleton" style="height:42px;width:50%"></div>
+              <div class="skeleton" style="height:6px;width:100%"></div>
+            </div>
+          </div>
+
+          <!-- Diferença atual (R20) -->
+          <div class="diff-strip" id="diff-strip">
+            <span class="diff-label">Diferença atual</span>
+            <span class="diff-values" id="diff-values">—</span>
+          </div>
+        </section>
+
+        <!-- Detalhe do Estado selecionado (R24, R25, R26) -->
+        <div class="detail-backdrop" id="detail-backdrop" aria-hidden="true"></div>
+        <section class="detail-panel" id="detail-panel" hidden aria-labelledby="detail-uf-title">
+          <div class="sheet-handle-bar" id="sheet-handle" aria-label="Arraste para expandir ou fechar o painel do estado">
+            <div class="sheet-handle-pill"></div>
+          </div>
+          <div class="detail-head">
+            <div>
+              <h2 id="detail-uf-title">Estado</h2>
+              <p id="detail-uf-sub">Última totalização da UF: —</p>
+            </div>
+            <div class="detail-actions">
+              <button type="button" class="btn" id="btn-share-uf" aria-label="Compartilhar link deste estado">
+                <span id="share-btn-text">Compartilhar</span>
+              </button>
+              <button type="button" class="btn btn-icon" id="btn-close-detail" aria-label="Fechar detalhe do estado">✕</button>
+            </div>
+          </div>
+          <div id="detail-cands-list"></div>
+          <div class="detail-meta-grid" id="detail-meta-grid">
+            <div class="detail-meta-item">Diferença atual<strong id="det-diff">—</strong></div>
+            <div class="detail-meta-item">Seções apuradas<strong id="det-sec">—</strong></div>
+            <div class="detail-meta-item">Comparecimento<strong id="det-comp">—</strong></div>
+            <div class="detail-meta-item">Posição no ranking<strong id="det-rank">—</strong></div>
+          </div>
+        </section>
+
+        <!-- Andamento da Apuração e Comparecimento / Votos (R21) -->
+        <section class="card" aria-labelledby="progress-title">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="progress-title">Andamento da apuração</h2>
+              <span class="card-sub" id="secs-count-text">— de — seções totalizadas</span>
+            </div>
+            <div class="prog-pct val-flash" id="sec-pct-label">—</div>
+          </div>
+
+          <div class="prog-block">
+            <div class="prog-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="sec-progressbar" aria-label="Percentual de seções apuradas">
+              <div class="prog-fill" id="sec-prog-fill"></div>
+            </div>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-box">
+              <span class="m-label">Comparecimento</span>
+              <strong class="m-pct val-flash" id="m-comp-pct">—</strong>
+              <span class="m-abs" id="m-comp-abs">—</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Abstenção</span>
+              <strong class="m-pct val-flash" id="m-abst-pct">—</strong>
+              <span class="m-abs" id="m-abst-abs">—</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Votos válidos</span>
+              <strong class="m-pct val-flash" id="m-val-pct">—</strong>
+              <span class="m-abs" id="m-val-abs">—</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Brancos</span>
+              <strong class="m-pct val-flash" id="m-br-pct">—</strong>
+              <span class="m-abs" id="m-br-abs">—</span>
+            </div>
+            <div class="metric-box">
+              <span class="m-label">Nulos</span>
+              <strong class="m-pct val-flash" id="m-nul-pct">—</strong>
+              <span class="m-abs" id="m-nul-abs">—</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ranking de Estados — Alternativa Acessível ao Mapa (R23) -->
+        <section class="card ranking-section hide-on-tv" aria-labelledby="ranking-title">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title" id="ranking-title">Ranking de estados</h2>
+              <span class="card-sub">Alternativa completa por teclado e leitor de tela</span>
+            </div>
+          </div>
+
+          <div class="ranking-controls">
+            <label for="rank-search" class="sr-only">Buscar estado por nome ou sigla</label>
+            <input type="search" id="rank-search" class="input-search" placeholder="Buscar estado (ex.: São Paulo, SP)…" autocomplete="off">
+
+            <label for="rank-region" class="sr-only">Filtrar por região</label>
+            <select id="rank-region" class="select-ctrl">
+              <option value="all">Todas as regiões</option>
+              <option value="Norte">Norte</option>
+              <option value="Nordeste">Nordeste</option>
+              <option value="Centro-Oeste">Centro-Oeste</option>
+              <option value="Sudeste">Sudeste</option>
+              <option value="Sul">Sul</option>
+              <option value="Exterior">Exterior</option>
+            </select>
+
+            <label for="rank-sort" class="sr-only">Ordenar estados por</label>
+            <select id="rank-sort" class="select-ctrl">
+              <option value="margin">Ordenar: Maior diferença (p.p.)</option>
+              <option value="pct">Ordenar: % Apurado</option>
+              <option value="votes">Ordenar: Total de votos</option>
+              <option value="name">Ordenar: Nome (A–Z)</option>
+            </select>
+          </div>
+
+          <div class="ranking-list" id="ranking-list" role="list" aria-label="Lista de estados"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Barra compacta fixa ao rolar (5.4) -->
+  <aside class="sticky-score hide-on-tv" id="sticky-score" aria-label="Resumo rápido do placar">
+    <div class="sticky-cand" id="sticky-cand-0">
+      <span class="sticky-dot" id="sticky-dot-0"></span>
+      <span id="sticky-text-0">—</span>
+    </div>
+    <span style="font-size:12px;color:var(--muted)" id="sticky-sec-pct">—% apurado</span>
+    <div class="sticky-cand" id="sticky-cand-1">
+      <span id="sticky-text-1">—</span>
+      <span class="sticky-dot" id="sticky-dot-1"></span>
+    </div>
+  </aside>
+
+  <!-- Tooltip flutuante para mouse em desktop (R18) -->
+  <div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+
+  <footer class="site-footer" role="contentinfo">
+    <span>Dados da Justiça Eleitoral (TSE), atualizados a cada 30 segundos. Resultado oficial: TSE.</span>
+    <span>Projeto independente, sem vínculo oficial. O resultado oficial é o do TSE.</span>
+  </footer>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

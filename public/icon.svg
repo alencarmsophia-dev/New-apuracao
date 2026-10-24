@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Apuração 2026">
+  <rect width="512" height="512" rx="112" fill="#0b0d11"/>
+  <rect x="64" y="96" width="384" height="320" rx="48" fill="#141820" stroke="#262c3a" stroke-width="8"/>
+  <rect x="104" y="152" width="144" height="36" rx="18" fill="#e11d2e"/>
+  <rect x="264" y="152" width="144" height="36" rx="18" fill="#1a4fd1"/>
+  <rect x="104" y="224" width="304" height="24" rx="12" fill="#262c3a"/>
+  <rect x="104" y="224" width="196" height="24" rx="12" fill="#eceef2"/>
+  <circle cx="140" cy="332" r="20" fill="#1b9a5f"/>
+  <rect x="180" y="320" width="180" height="24" rx="12" fill="#8b92a0"/>
+</svg>
